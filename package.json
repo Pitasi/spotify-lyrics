@@ -1,0 +1,18 @@
+{
+  "name": "lyrics_fetcher",
+  "version": "0.0.1",
+  "main": "./main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron-prebuilt": "^1.4.0",
+    "electron-winstaller": "^2.3.4"
+  },
+  "dependencies": {
+    "jquery": "^3.1.0",
+    "materialize-css": "^0.97.7",
+    "node-spotify-webhelper": "file:///home/antonio/GitHub/node-spotify-webhelper",
+    "portscanner": "^1.0.0"
+  }
+}

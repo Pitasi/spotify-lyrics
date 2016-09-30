@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>The epic lyrics fetcher 0.0.1</title>
+    <!--Import Google Icon Font-->
+    <link href="css/icons.css" rel="stylesheet">
+    <!--Import materialize.css-->
+    <link type="text/css" rel="stylesheet" href="../node_modules/materialize-css/dist/css/materialize.min.css" />
+
+    <style>
+      .hidden { display: none; }
+      .active {
+        color: black;
+        font-weight: bold;
+        font-size: 2em;
+      }
+      #control {
+        position: fixed;
+        width: 100%;
+        padding-top: 20px;
+        bottom: -15px;;
+        left: 0;
+        background: rgb(255, 255, 255);
+        text-align: center;
+        box-shadow: 0 -2px 5px 0 rgba(0,0,0,0.16),0 2px 10px 0 rgba(0,0,0,0.12);
+      }
+      .spacer { height: 120px; }
+    </style>
+</head>
+<body>
+  <nav class="light-blue lighten-1" role="navigation">
+    <div class="nav-wrapper container">
+      <a id="logo-container" href="javascript:void(0)" class="brand-logo">Lyrics Fetcher 0.0.1</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1 class="header center orange-text" id="loading">Connecting to Spotify...</h1>
+    <a href="javascript:void(0)" id="retry" class="hidden btn-large waves-effect waves-light orange">Try again</a>
+
+    <div id="control" class="hidden">
+      <div class="row">
+        <div class="col s3">
+          <a href="javascript:void(0)" id="less-delay" class="btn-large waves-effect waves-light orange"><i class="material-icons">remove</i></a>
+        </div>
+        <div class="col s6">
+          <p>Delay tuning</p>
+          <p id="delay">0 ms</p>
+        </div>
+        <div class="col s3">
+          <a href="javascript:void(0)" id="more-delay" class="btn-large waves-effect waves-light orange"><i class="material-icons">add</i></a>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="title"></h2>
+    <h3 id="artist"></h3>
+
+    <ul id="lyrics">
+    </ul>
+
+    <div class="spacer"></div>
+  </div>
+
+  <!-- scripts -->
+
+  <script>
+    window.$ = window.jQuery = require('jquery');
+  </script>
+  <script type="text/javascript" src="../node_modules/materialize-css/js/hammer.min.js"></script>
+  <script type="text/javascript" src="../node_modules/materialize-css/dist/js/materialize.min.js"></script>
+
+  <script>
+    var electron = require('electron');
+    function listen (event_name, callback) {
+      electron.ipcRenderer.on(event_name, (event, message) => {
+        callback(message);
+      })
+    }
+
+    var delay = 0;
+    function updateDelay (newValue) {
+      delay = newValue;
+      electron.ipcRenderer.send('delay', delay/1000);
+      $('#delay').html(`${delay} ms`);
+    }
+
+    var spotifyConnect = setTimeout(function () {
+      // display an error message
+      $('#loading').html('Error. Spotify not found.');
+      $('#retry').removeClass('hidden');
+    }, 5000);
+
+    listen('spotify', function () {
+      clearTimeout(spotifyConnect);
+      $('#loading').removeClass('hidden').html('Loading song...');
+    })
+    listen('song', function (song) {
+      updateDelay(0);
+      electron.ipcRenderer.send('delay', 0);
+      $('#title').html(song.track.track_resource.name);
+      $('#artist').html(song.track.artist_resource.name);
+      $('#control').addClass('hidden');
+      $('#loading').removeClass('hidden').html('Loading lyrics...');
+      $('#lyrics').html('');
+    });
+    var staticTimeout = null;
+    listen('static-lyrics', function (lyrics) {
+      // let's wait 500 msec then show the lyrics
+      // (useful when waiting for the dynamic lyrics)
+      $('#loading').html('Syncing...');
+      staticTimeout = setTimeout(function () {
+        $('#lyrics').html('');
+        var tmp = lyrics.split('\n');
+        for (var i in tmp) $('#lyrics').append(`<li>${tmp[i]}</li>`);
+      }, 500);
+    });
+    listen('dynamic-lyrics', function (lyrics) {
+      $('#loading').addClass('hidden');
+      $('#control').removeClass('hidden');
+      if (staticTimeout) clearTimeout(staticTimeout);
+      $('#lyrics').html('');
+      for (var i in lyrics) $('#lyrics').append(`<li>${lyrics[i][0]}</li>`);
+    });
+    listen('update', function (index) {
+      $('.active').removeClass('active');
+      $(`#lyrics > li:nth-child(${index+1})`).addClass('active');
+      $('html, body').animate({
+          scrollTop: $(".active").offset().top - 75
+      }, 300);
+
+    });
+
+    $('#more-delay').click(function () { updateDelay(delay + 200) });
+    $('#less-delay').click(function () { updateDelay(delay - 200) });
+    $('#retry').click(function () { electron.ipcRenderer.send('restart'); });
+  </script>
+</body>
+</html>
