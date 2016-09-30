@@ -123,7 +123,7 @@ function new_track (track) {
   win.send('song', track);
   console.log(`=== ${track.track_resource.name} ===\n=== ${track.artist_resource.name} ===`);
   fetchLyrics(track.track_resource.name, track.artist_resource.name, function (lyrics) {
-    if (lyrics.type != 'exact') {
+    if (lyrics.type != 'exact' && lyrics.type != 'aprox') {
       console.log('Lyrics not found!')
       win.send('static-lyrics', null)
     }
