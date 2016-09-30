@@ -5,6 +5,11 @@
   "scripts": {
     "start": "electron ."
   },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Pitasi/spotify-lyrics.git"
+  },
+  "license": "GPL-3.0",
   "devDependencies": {
     "electron-prebuilt": "^1.4.0",
     "electron-winstaller": "^2.3.4"
