@@ -9,20 +9,7 @@ app.on('window-all-closed', function () { app.quit() })
 
 function start () {
 
-  const template = [
-    {
-      role: 'help',
-      submenu: [
-        {
-          label: 'Fork me on GiHub!',
-          click () { require('electron').shell.openExternal('https://github.com/Pitasi/spotify-lyrics') }
-        }
-      ]
-    }
-  ];
-
-  const menu = Menu.buildFromTemplate(template)
-  Menu.setApplicationMenu(menu)
+  Menu.setApplicationMenu(new Menu())
 
   app.on('ready', () => {
     win = new BrowserWindow({
@@ -33,7 +20,6 @@ function start () {
     });
 
     win.loadURL('file://' + __dirname + '/app/index.html');
-
 
     win.once('ready-to-show', () => {
       win.show();
