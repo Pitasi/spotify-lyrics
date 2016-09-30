@@ -1,38 +1,61 @@
+/* REQUIRES */
+var SpotifyWebHelper = require('@jonny/spotify-web-helper')
 const {ipcMain} = require('electron');
-var nodeSpotifyWebHelper = require('node-spotify-webhelper');
 var portscanner = require('portscanner')
 var http = require('http');
-var tmp;
-var spotifyClient;
-var mainLoop;
-var win;
 
-API_KEY = '';
+/* CONSTANTS */
+API_KEY = ''; // it just works without a key ?!
 API_LYRICS_URL = 'http://api.vagalume.com.br/search.php';
 API_TIMING_URL = 'http://app2.vagalume.com.br/ajax/subtitle-get.php?action=getBestSubtitle';
+UPDATE_INTERVAL = 250;
 
+/* GLOBAL VARIABLES */
+var helper; // spotify helper
+var win; // app window, send/receive events
+var current_track = {
+  song: null,
+  position: null,
+  line: null,
+  subtitles: null
+} // playing (or paused) track
+var updateTimings; // interval for updating lyrics position
+var delay = 0;
+
+/* FUNCTIONS */
 function init (myWin) {
+  // let's search for spotify port
   portscanner.findAPortInUse(4370, 4380, '127.0.0.1', function(error, port) {
     if ( error || !port ) {
       throw 'Spotify port not found. Is it running?'
       return;
     }
+
     win = myWin;
-    return main( port );
+    helper = new SpotifyWebHelper({port: port})
+
+    // wait for helper to be ready
+    helper.player.on('ready', function() {
+      //  catch errors
+      helper.player.on('error', error_handler);
+
+      // catch new songs
+      helper.player.on('track-change', new_track);
+
+      // catch pauses or endings
+      helper.player.on('play', play_handler);
+      helper.player.on('pause', pause_handler);
+
+      // catch delay event from main window
+      ipcMain.on('delay', function(event, arg) {
+        update_delay(arg);
+      });
+
+      console.log('Spotify connected on port ' + port);
+      win.send('spotify');
+      new_track(helper.status.track)
+    });
   })
-}
-
-function listenEvent (name, callback) {
-  ipcMain.on(name, function(event, arg) {
-    callback(arg);
-  });
-}
-
-function getCurrentTrack(spotifyClient, callback){
-  spotifyClient.getStatus(function (err, res) {
-    if (err) return console.error(err);
-    callback(res);
-  });
 }
 
 function fetchLyrics (title, artist, callback) {
@@ -74,104 +97,73 @@ function fetchTimings (id, duration, callback) {
   });
 }
 
-var updating = false;
-var last_spotify_update = 0;
-var last_known_position = 0;
-var delay = 0;
-var last_playing = null;
-var paused = false;
-function update (subtitles) {
-  if (updating) return;
-  updating = true;
-  var now = Date.now();
+function update () {
+  if (!current_track.subtitles) return;
 
-  if ( paused || now - last_spotify_update > 5000 ) {
-    // let's fetch from spotify client
-    getCurrentTrack(spotifyClient, function(res){
-      // check if song changed
-      if (res.track.track_resource.name != last_playing) return new_song(res);
-
-      // if paused skip everything
-      paused = !res.playing;
-      if ( paused ) {
-        updating = false;
-        return;
-      }
-
-      var line;
-      for (var i = subtitles.length-1; i >= 0; i--)
-        if (res.playing_position - delay >= subtitles[i][1]) {
-          line = subtitles[i][0];
-          break;
-        }
-      last_spotify_update = now;
-      last_known_position = res.playing_position;
-
-      if (line && tmp != line) {
-        console.log(line);
-        win.send('update', i);
-        tmp = line;
-      }
-
-      updating = false;
-    });
-  }
-  else {
-    // let's use system clock
-    var line;
-    var current_position = (now - last_spotify_update)/1000 + last_known_position - delay;
-    for (var i = subtitles.length-1; i >= 0; i--)
-      if (current_position >= subtitles[i][1]) {
-        line = subtitles[i][0];
-        break;
-      }
-    if (line && tmp != line) {
-      console.log(line);
-      win.send('update', i);
-      tmp = line;
+  var line = "";
+  current_track.position = helper.status.playing_position - delay;
+  for (var i = current_track.subtitles.length-1; i >= 0; i--)
+    if (current_track.position >= current_track.subtitles[i][1]) {
+      line = current_track.subtitles[i][0];
+      break;
     }
-    updating = false;
+  if (line && current_track.line != line) {
+    console.log(line);
+    win.send('update', i);
+    current_track.line = line;
   }
 }
 
-function new_song_helper(res){
-  last_playing = res.track.track_resource.name;
-  win.send('song', res);
-  console.log(`=== ${res.track.track_resource.name} ===\n=== ${res.track.artist_resource.name} ===`);
-  fetchLyrics(
-    res.track.track_resource.name,
-    res.track.artist_resource.name,
-    function(song){
-      win.send('static-lyrics', song.mus[0].text);
-      fetchTimings(song.mus[0].id, res.length, function (timings) {
-        win.send('dynamic-lyrics', timings.subtitles[0].text_compressed);
-        mainLoop = setInterval(function () {
-          update(timings.subtitles[0].text_compressed)
-        }, 100);
-      })
-    });
+/* EVENT HANDLERS */
+function error_handler (err) { console.error(err); } // TODO: real error handling
+
+function new_track (track) {
+  clearInterval(updateTimings);
+  current_track.song = track;
+  win.send('song', track);
+  console.log(`=== ${track.track_resource.name} ===\n=== ${track.artist_resource.name} ===`);
+  fetchLyrics(track.track_resource.name, track.artist_resource.name, function (lyrics) {
+    if (lyrics.type != 'exact') {
+      console.log('Lyrics not found!')
+      win.send('static-lyrics', null)
+    }
+    else {
+      win.send('static-lyrics', lyrics.mus[0].text);
+      fetchTimings(lyrics.mus[0].id, current_track.song.length, function (timings) {
+        if ( !timings.langs ) {
+          console.log('No synced lyrics available.');
+          win.send('dynamic-lyrics', null);
+        }
+        else {
+          var lang_id = null;
+          var subtitles;
+          for (var i in timings.langs)
+            if ( timings.langs[i].langAbbr === 'ENG' ) {
+              lang_id = timings.langs[i].langID;
+              break;
+            }
+          for (var i in timings.subtitles)
+            if ( timings.subtitles[i].lID === lang_id ) {
+              subtitles = timings.subtitles[i].text_compressed;
+              break;
+            }
+
+          current_track.subtitles = subtitles;
+          win.send('dynamic-lyrics', subtitles);
+          updateTimings = setInterval(update, UPDATE_INTERVAL);
+        }
+      });
+    }
+  })
 }
 
-function new_song (song) {
-  if (mainLoop) clearInterval(mainLoop);
-  updating = false;
+function play_handler () { updateTimings = setInterval(update, UPDATE_INTERVAL); }
+function pause_handler () { clearInterval(updateTimings) }
 
-  if (song) new_song_helper(song);
-  else      getCurrentTrack(spotifyClient, new_song_helper);
+function update_delay (new_value) {
+  delay = new_value;
+  // TODO: store value in a db
+  // TODO very later: send value to shared server (musixmatch ?!)
 }
 
-function main(port) {
-  listenEvent('delay', function (arg) {
-    delay = arg;
-  });
-
-  spotifyClient = new nodeSpotifyWebHelper.SpotifyWebHelper({port: port});
-  console.log('Connected to Spotify.');
-  win.send('spotify');
-  new_song(null);
-}
-
-module.exports = {
-  init: init,
-  main: main
-}
+module.exports.init = init;

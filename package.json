@@ -1,5 +1,5 @@
 {
-  "name": "lyrics_fetcher",
+  "name": "spotify-lyrics",
   "version": "0.0.1",
   "main": "./main.js",
   "scripts": {
@@ -10,9 +10,9 @@
     "electron-winstaller": "^2.3.4"
   },
   "dependencies": {
+    "@jonny/spotify-web-helper": "git+https://github.com/Pitasi/spotify-web-helper/",
     "jquery": "^3.1.0",
     "materialize-css": "^0.97.7",
-    "node-spotify-webhelper": "file:///home/antonio/GitHub/node-spotify-webhelper",
     "portscanner": "^1.0.0"
   }
 }
