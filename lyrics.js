@@ -27,7 +27,6 @@ function init (myWin) {
   // let's search for spotify port
   portscanner.findAPortInUse(4370, 4380, '127.0.0.1', function(error, port) {
     if ( error || !port ) {
-      throw 'Spotify port not found. Is it running?'
       return;
     }
 
