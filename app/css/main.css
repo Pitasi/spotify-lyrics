@@ -1,7 +1,3 @@
-button {
-  -webkit-app-region: no-drag !important;
-}
-
 .hidden { display: none; }
 
 .active {
