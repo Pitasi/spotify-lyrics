@@ -1,0 +1,6 @@
+{
+  "name": "Spotify-lyrics",
+  "tagline": "Synced lyrics for Spotify.",
+  "body": "# spotify-lyrics\r\nSynced lyrics for Spotify.\r\n\r\n## < This is an early stage of development! >\r\n\r\n# Installing and running the app from source\r\n```bash\r\n$ git clone https://github.com/Pitasi/spotify-lyrics\r\n$ cd spotify-lyrics\r\n$ npm install\r\n$ npm start\r\n```\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
