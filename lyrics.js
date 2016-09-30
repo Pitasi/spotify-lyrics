@@ -132,6 +132,7 @@ function new_track (track) {
       fetchTimings(lyrics.mus[0].id, current_track.song.length, function (timings) {
         if ( !timings.langs ) {
           console.log('No synced lyrics available.');
+          current_track.subtitles = null;
           win.send('dynamic-lyrics', null);
         }
         else {
