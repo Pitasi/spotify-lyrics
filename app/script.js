@@ -18,12 +18,10 @@ function updateDelay (newValue) {
 var spotifyConnect = setTimeout(function () {
   // display an error message
   $('#loading').html('Error. Spotify not found.');
-  $('#retry').removeClass('hidden');
 }, 10000);
 
 listen('spotify', function () {
   clearTimeout(spotifyConnect);
-  $('#retry').addClass('hidden');
   $('#loading').removeClass('hidden').html('Loading song...');
 })
 listen('song', function (song) {
@@ -72,7 +70,3 @@ listen('update', function (index) {
     }, 300);
 
 });
-
-$('#more-delay').click(function () { updateDelay(delay + 200) });
-$('#less-delay').click(function () { updateDelay(delay - 200) });
-$('#retry').click(function () { electron.ipcRenderer.send('restart'); });
