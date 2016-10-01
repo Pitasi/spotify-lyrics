@@ -18,6 +18,7 @@
     "@jonny/spotify-web-helper": "git+https://github.com/Pitasi/spotify-web-helper/",
     "jquery": "^3.1.0",
     "materialize-css": "^0.97.7",
-    "portscanner": "^1.0.0"
+    "portscanner": "^1.0.0",
+    "toastr": "^2.1.2"
   }
 }

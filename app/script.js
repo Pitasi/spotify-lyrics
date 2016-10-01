@@ -1,5 +1,24 @@
 var electron = require('electron');
 var menu_help = require('./menu.js');
+var toastr = require('toastr');
+toastr.options = {
+  "closeButton": false,
+  "debug": false,
+  "newestOnTop": false,
+  "progressBar": true,
+  "positionClass": "toast-bottom-center",
+  "preventDuplicates": true,
+  "onclick": null,
+  "showDuration": "300",
+  "hideDuration": "1000",
+  "timeOut": "5000",
+  "extendedTimeOut": "1000",
+  "showEasing": "swing",
+  "hideEasing": "linear",
+  "showMethod": "fadeIn",
+  "hideMethod": "fadeOut"
+};
+
 function listen (event_name, callback) {
   electron.ipcRenderer.on(event_name, (event, message) => {
     callback(message);
@@ -13,6 +32,8 @@ function updateDelay (newValue) {
   electron.ipcRenderer.send('delay', delay/1000);
   $('#delay').html(`${delay} ms`);
   menu_help.update_delay(newValue);
+  toastr.clear();
+  toastr["info"](`Delay set to ${delay} ms.`);
 }
 
 var spotifyConnect = setTimeout(function () {
@@ -23,8 +44,10 @@ var spotifyConnect = setTimeout(function () {
 listen('spotify', function () {
   clearTimeout(spotifyConnect);
   $('#loading').removeClass('hidden').html('Loading song...');
+  toastr["success"]("Connected to Spotify");
 })
 listen('song', function (song) {
+  toastr["info"]("Searching lyrics...");
   electron.ipcRenderer.send('delay', 0);
   updateDelay(0);
   menu_help.hide_delay();
@@ -37,11 +60,15 @@ var staticTimeout = null;
 listen('static-lyrics', function (lyrics) {
   // let's wait 500 msec then show the lyrics
   // (useful when waiting for the dynamic lyrics)
+  toastr.clear();
   if (!lyrics) {
+    toastr["error"]("Lyrics not found :(");
     $('#loading').addClass('hidden');
     $('#lyrics').html('Lyrics not found!');
     return;
   }
+
+  toastr["info"]("Syncing...");
   $('#loading').html('Syncing...');
   staticTimeout = setTimeout(function () {
     $('#lyrics').html('');
@@ -50,10 +77,14 @@ listen('static-lyrics', function (lyrics) {
   }, 500);
 });
 listen('dynamic-lyrics', function (lyrics) {
+  toastr.clear();
   if (!lyrics) {
+    toastr["error"]("Timed lyrics not available");
     $('#loading').addClass('hidden');
     return;
   }
+
+  toastr["success"]("Success!");
   $('#loading').addClass('hidden');
   menu_help.show_delay(delay);
   clearTimeout(staticTimeout);
