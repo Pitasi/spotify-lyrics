@@ -1,6 +1,6 @@
 {
   "name": "spotify-lyrics",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "main": "./main.js",
   "scripts": {
     "start": "electron ."
@@ -15,7 +15,7 @@
     "electron-winstaller": "^2.3.4"
   },
   "dependencies": {
-    "@jonny/spotify-web-helper": "git+https://github.com/Pitasi/spotify-web-helper/",
+    "@jonny/spotify-web-helper": "^1.4.0",
     "jquery": "^3.1.0",
     "materialize-css": "^0.97.7",
     "portscanner": "^1.0.0",
