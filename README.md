@@ -1,7 +1,7 @@
 # spotify-lyrics
 Synced lyrics for Spotify.
 
-## < This repo is unmaintained >
+## This repo is unmaintained
 
 
 # Installing and running the app from source
